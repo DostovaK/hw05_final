@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}
+  Лента новостей
+{% endblock %}
+
+{% block content %}
+  <h1>Последние посты тех, на кого Вы подписаны</h1>
+
+  {% include 'posts/includes/switcher.html' %}
+
+  {% load cache %}
+  {% cache 20 index_page with page_obj %}
+  {% for post in page_obj %}
+    {% include 'includes/post_card.html' %}
+  {% endfor %}
+  {% endcache %}
+  
+  {% include 'posts/includes/paginator.html' %}
+
+{% endblock content %}
