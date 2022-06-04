@@ -115,12 +115,11 @@ def add_comment(request, pk):
 
 @login_required
 def follow_index(request):
-    followers = request.user.follower.values('author')
     posts = (
         Post
         .objects
         .select_related('author', 'group')
-        .filter(author__in=followers)
+        .filter(author__following__user=request.user)
     )
     context = {
         'posts': posts,
@@ -139,8 +138,8 @@ def profile_follow(request, username):
 
 @login_required
 def profile_unfollow(request, username):
-    author = get_object_or_404(User, username=username)
-    if author != request.user:
-        follower = Follow.objects.get(user=request.user, author=author)
-        follower.delete()
-    return redirect('posts:profile', author.username)
+    (Follow
+     .objects
+     .filter(author__username=username, user=request.user)
+     .delete())
+    return redirect('posts:profile', username)

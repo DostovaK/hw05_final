@@ -35,36 +35,6 @@ class PostsURLTests(TestCase):
             f'/profile/{PostsURLTests.post.author.username}/unfollow/':
                 HTTPStatus.FOUND
         }
-        cls.expected_redirections = {
-            reverse('posts:post_create'):
-                (reverse('users:login') + '?next=/create/'),
-            reverse('posts:post_edit', kwargs={'pk': PostsURLTests.post.pk}):
-                (reverse('users:login') + '?next='
-                 + reverse(
-                     'posts:post_edit', kwargs={'pk': PostsURLTests.post.pk}
-                )),
-            reverse('posts:add_comment', kwargs={'pk': PostsURLTests.post.pk}):
-                (reverse('users:login') + '?next='
-                 + reverse(
-                     'posts:add_comment', kwargs={'pk': PostsURLTests.post.pk}
-                )),
-            reverse(
-                'posts:profile_follow',
-                kwargs={'username': PostsURLTests.post.author.username}
-            ): (reverse('users:login') + '?next='
-                + reverse(
-                    'posts:profile_follow',
-                    kwargs={'username': PostsURLTests.post.author.username}
-            )),
-            reverse(
-                'posts:profile_unfollow',
-                kwargs={'username': PostsURLTests.post.author.username}
-            ): (reverse('users:login') + '?next='
-                + reverse(
-                    'posts:profile_unfollow',
-                    kwargs={'username': PostsURLTests.post.author.username}
-            )),
-        }
         cls.expected_urls_code = [
             reverse('posts:post_create'),
             reverse('posts:post_edit', kwargs={'pk': PostsURLTests.post.pk})
@@ -105,17 +75,6 @@ class PostsURLTests(TestCase):
                 self.assertEqual(
                     response.status_code,
                     status_code
-                )
-
-    def test_guest_redirection(self):
-        """
-        Запрошенная страница перенаправляет неавторизованного пользователя.
-        """
-        for url, expected_value in self.expected_redirections.items():
-            with self.subTest(url=url):
-                self.assertRedirects(
-                    self.guest_client.get(url, follow=True),
-                    expected_value
                 )
 
     def test_post_id_redirects_nonauthor(self):

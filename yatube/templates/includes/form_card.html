@@ -58,6 +58,11 @@
             <button type="submit" class="btn btn-primary">
               {{ btn }}
             </button>
+            {% if template_name == 'users/login.html' %}
+              <a href="{% url 'users:password_reset' %}" class="btn btn-link">
+                Забыли пароль?
+              </a>
+            {% endif %}
           </div>
           </form>
         </div>

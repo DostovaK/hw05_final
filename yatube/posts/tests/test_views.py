@@ -8,7 +8,7 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from posts.models import Follow, Group, Post, User
+from posts.models import Follow, Group, Post, User, Comment
 
 User = get_user_model()
 
@@ -83,6 +83,37 @@ class PostsPagesTests(TestCase):
             'group': forms.models.ChoiceField,
             'image': forms.fields.ImageField,
         }
+        cls.expected_redirections = {
+            reverse('posts:post_create'):
+                (reverse('users:login') + '?next=/create/'),
+            reverse('posts:post_edit', kwargs={'pk': PostsPagesTests.post.pk}):
+                (reverse('users:login') + '?next='
+                 + reverse(
+                     'posts:post_edit', kwargs={'pk': PostsPagesTests.post.pk}
+                )),
+            reverse(
+                'posts:add_comment', kwargs={'pk': PostsPagesTests.post.pk}
+            ): (reverse('users:login') + '?next='
+                + reverse(
+                    'posts:add_comment', kwargs={'pk': PostsPagesTests.post.pk}
+            )),
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': PostsPagesTests.post.author.username}
+            ): (reverse('users:login') + '?next='
+                + reverse(
+                    'posts:profile_follow',
+                    kwargs={'username': PostsPagesTests.post.author.username}
+            )),
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': PostsPagesTests.post.author.username}
+            ): (reverse('users:login') + '?next='
+                + reverse(
+                    'posts:profile_unfollow',
+                    kwargs={'username': PostsPagesTests.post.author.username}
+            )),
+        }
 
     @classmethod
     def tearDownClass(cls):
@@ -90,6 +121,7 @@ class PostsPagesTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
+        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(PostsPagesTests.post.author)
 
@@ -162,6 +194,17 @@ class PostsPagesTests(TestCase):
                 form_field = response.context.get('form').fields.get(value)
                 self.assertIsInstance(form_field, expected)
 
+    def test_guest_redirection(self):
+        """
+        Запрошенная страница перенаправляет неавторизованного пользователя.
+        """
+        for url, expected_value in self.expected_redirections.items():
+            with self.subTest(url=url):
+                self.assertRedirects(
+                    self.guest_client.get(url, follow=True),
+                    expected_value
+                )
+
     def test_post_another_group(self):
         """Пост не попал в другую группу."""
         response = self.authorized_client.get(
@@ -180,7 +223,12 @@ class PostsPagesTests(TestCase):
             data=form_data,
             follow=True
         )
-        self.assertEqual(form_data['text'], 'Test comment')
+        self.assertTrue(
+            Comment.objects.filter(
+                text='Test comment',
+                author=PostsPagesTests.user
+            ).exists()
+        )
 
 
 class PaginatorViewsTests(TestCase):
@@ -318,3 +366,11 @@ class FollowTests(TestCase):
         """Новый пост появляется только в ленте подписавшихся."""
         response = self.following_client.get(reverse('posts:follow_index'))
         self.assertNotIn(FollowTests.post, response.context['page_obj'])
+        self.follower_client.get(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': FollowTests.user_following.username}
+            )
+        )
+        response = self.follower_client.get(reverse('posts:follow_index'))
+        self.assertIn(FollowTests.post, response.context['page_obj'])
