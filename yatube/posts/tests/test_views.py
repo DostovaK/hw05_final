@@ -8,7 +8,8 @@ from django.core.cache import cache
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from posts.models import Follow, Group, Post, User, Comment
+
+from posts.models import Comment, Follow, Group, Post, User
 
 User = get_user_model()
 
